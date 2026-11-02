@@ -1,4 +1,4 @@
-# Hatch Tasks 0.4.0
+# Hatch Tasks 0.5.0
 
 A native Hatch task browser and execution console for PyCharm builds 253?262.
 
@@ -9,6 +9,10 @@ The bottom **Hatch Tasks** window keeps live output and session history. Differe
 The browser preserves selection and expansion on refresh. Failed discovery retains cached tasks marked stale and disables execution until refresh succeeds. Removal operations require confirmation, including reruns. Project trust is required for discovery and execution.
 
 Saved run configurations use the standard Run window and retain working-directory, argument, executable override, and environment-variable settings. Existing settings and project links remain compatible.
+
+Run and test configurations are created automatically at startup for discovered `run`/`start` and `test`/`tests` scripts. Names use the package metadata, such as **run hatch-task-demo**, with suffixes for non-default environments. They appear in the normal run selector with a monochrome Hatch icon. Disable automatic creation under **Settings > Tools > Hatch** if desired.
+
+Refresh reuses existing configurations and preserves edits. Deleted generated configurations stay deleted; use **Save Configuration** in the task context menu to restore one. Configurations are stored locally. Metadata lookup failures leave the task browser usable and show details for recovery.
 
 ## Build
 

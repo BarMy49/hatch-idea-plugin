@@ -2,8 +2,6 @@ package dev.barmy.hatch
 
 import com.intellij.ide.trustedProjects.TrustedProjects
 import com.intellij.openapi.Disposable
-import com.intellij.openapi.application.ApplicationManager
-import com.intellij.openapi.application.WriteIntentReadAction
 import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.diagnostic.ControlFlowException
 import com.intellij.openapi.fileChooser.FileChooser
@@ -11,14 +9,9 @@ import com.intellij.openapi.fileChooser.FileChooserDescriptorFactory
 import com.intellij.openapi.fileEditor.FileDocumentManager
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.ui.Messages
-import com.intellij.openapi.vfs.VirtualFileManager
-import com.intellij.openapi.vfs.newvfs.BulkFileListener
-import com.intellij.openapi.vfs.newvfs.events.VFileEvent
 import com.intellij.ui.TreeSpeedSearch
 import java.awt.BorderLayout
-import java.awt.GridLayout
 import java.nio.file.Path
-import java.util.concurrent.atomic.AtomicInteger
 import javax.swing.*
 import javax.swing.tree.DefaultMutableTreeNode
 import javax.swing.tree.DefaultTreeModel
@@ -40,9 +33,7 @@ class HatchToolWindowPanel(private val project: Project) : JPanel(BorderLayout()
     private val unlink = JButton("Unlink")
     private val cached = mutableMapOf<Path, List<HatchEnvironment>>()
     private val stale = mutableSetOf<Path>()
-    private val serial = AtomicInteger()
     @Volatile private var disposed = false
-    private val timer = Timer(600) { discover() }.apply { isRepeats = false }
 
     private fun paths(): List<Path> {
         val base = project.basePath?.let(Path::of)
@@ -105,16 +96,10 @@ class HatchToolWindowPanel(private val project: Project) : JPanel(BorderLayout()
             }.toMutableList()
             discover()
         }
-        project.messageBus.connect(this).subscribe(VirtualFileManager.VFS_CHANGES, object : BulkFileListener {
-            override fun after(events: List<VFileEvent>) {
-                if (events.any { e -> paths().any { p ->
-                    val path = e.path.replace('\\', '/')
-                    path == p.resolve("pyproject.toml").toString().replace('\\', '/') ||
-                        path == p.resolve("hatch.toml").toString().replace('\\', '/')
-                } }) SwingUtilities.invokeLater { if (!disposed) timer.restart() }
-            }
-        })
-        updateActions(); discover()
+        project.getService(HatchDiscovery::class.java).listen(this) { renderDiscovery() }
+        updateActions()
+        val discovery = project.getService(HatchDiscovery::class.java)
+        if (discovery.busy || discovery.results.isNotEmpty()) renderDiscovery() else discover()
     }
 
     private fun treeKey(value: Any): String {
@@ -185,34 +170,15 @@ class HatchToolWindowPanel(private val project: Project) : JPanel(BorderLayout()
     }
     private fun discover() = uiAction { discoverLocked() }
 
-    private fun discoverLocked() {
+    private fun discoverLocked() { project.getService(HatchDiscovery::class.java).refresh() }
+    private fun renderDiscovery() {
         if (disposed || project.isDisposed) return
-        val request = serial.incrementAndGet()
-        val binary = try { HatchExecutableInput.normalize(settings.executable) } catch (error: IllegalArgumentException) {
-            status.text = "Invalid Hatch executable."
-            details.text = error.message
-            refresh.isEnabled = true
-            return
-        }
-        if (!TrustedProjects.isProjectTrusted(project)) {
-            status.text = "Trust this project, then click Refresh."
-            details.text = "Saved executable: $binary\nDiscovery is disabled until this project is trusted."
-            refresh.isEnabled = true
-            return
-        }
-        FileDocumentManager.getInstance().saveAllDocuments()
-        val projects = paths().filter(HatchProjects::isProject)
-        details.text = "Executable: $binary\nCommand: env show --json"
-        refresh.isEnabled = false; status.text = "Discovering Hatch tasks…"
-        ApplicationManager.getApplication().executeOnPooledThread {
-            val results = projects.map { path -> path to runCatching {
-                val output = HatchCommand.capture(binary, path, listOf("env", "show", "--json"))
-                check(!output.isTimeout) { "Discovery timed out after 20 seconds" }
-                check(output.exitCode == 0) { output.stderr.ifBlank { output.stdout.ifBlank { "Exit code ${output.exitCode}" } } }
-                HatchModel.parse(output.stdout)
-            } }
-            SwingUtilities.invokeLater {
-                if (disposed || project.isDisposed || request != serial.get()) return@invokeLater
+        val discovery = project.getService(HatchDiscovery::class.java)
+        if (!TrustedProjects.isProjectTrusted(project)) { status.text = "Trust this project to discover Hatch tasks."; return }
+        if (discovery.busy) { status.text = "Discovering Hatch tasks?"; return }
+        val binary = settings.executable
+        val results = discovery.results.map { it.directory to it.environments }
+        val projects = results.map { it.first }
                 val expanded = java.util.Collections.list(tree.getExpandedDescendants(javax.swing.tree.TreePath(root)) ?: java.util.Collections.emptyEnumeration()).map { it.path.map(::treeKey) }.toSet()
                 val selection = tree.selectionPath?.path?.map(::treeKey)
                 val firstLoad = root.childCount == 0
@@ -243,21 +209,24 @@ class HatchToolWindowPanel(private val project: Project) : JPanel(BorderLayout()
                     else "${projects.size} project(s). Double-click a task to run."
                 details.text = if (errors.isEmpty()) "Executable: $binary\nReady. Select a script or build task; double-click or press Enter to run."
                     else errors.joinToString("\n\n").take(30000)
+                val metadataErrors = discovery.results.filter { it.environments.isSuccess && it.metadataError != null }
+                if (metadataErrors.isNotEmpty()) {
+                    status.text = "Tasks ready; run configuration setup needs attention."
+                    details.append("\n" + metadataErrors.joinToString("\n") { "${it.directory}: ${it.metadataError}. Check Hatch metadata and Refresh." })
+                }
                 details.caretPosition = 0
                 updateActions()
-            }
-        }
     }
     /** Swing events are on EDT but do not automatically acquire the IDE write-intent lock. */
     private fun uiAction(action: () -> Unit) {
         if (disposed || project.isDisposed) return
-        WriteIntentReadAction.run(Runnable {
+        hatchWriteIntentAction {
             try { action() } catch (error: Throwable) { reportFailure(error) }
-        })
+        }
     }
 
     private fun reportFailure(error: Throwable) {
-        if (error is ControlFlowException || error is VirtualMachineError || error is ThreadDeath) throw error
+        if (error is ControlFlowException || error is Error) throw error
         Logger.getInstance(HatchToolWindowPanel::class.java).warn("Hatch UI action failed", error)
         status.text = "Hatch action failed — see details below."
         details.text = error.stackTraceToString()
@@ -266,5 +235,5 @@ class HatchToolWindowPanel(private val project: Project) : JPanel(BorderLayout()
         Messages.showErrorDialog(project, "${error.javaClass.simpleName}: ${error.message}\n\nFull details are available in the Hatch tool window.", "Hatch Action Failed")
     }
 
-    override fun dispose() { disposed = true; serial.incrementAndGet(); timer.stop() }
+    override fun dispose() { disposed = true }
 }

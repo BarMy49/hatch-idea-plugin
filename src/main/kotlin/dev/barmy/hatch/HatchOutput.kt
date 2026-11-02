@@ -3,7 +3,6 @@ package dev.barmy.hatch
 import com.intellij.icons.AllIcons
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.actionSystem.*
-import com.intellij.openapi.application.WriteIntentReadAction
 import com.intellij.openapi.fileEditor.FileDocumentManager
 import com.intellij.ide.trustedProjects.TrustedProjects
 import com.intellij.openapi.project.Project
@@ -15,7 +14,7 @@ import com.intellij.ui.content.ContentFactory
 import java.awt.BorderLayout
 import javax.swing.*
 
-fun hatchAction(text: String, icon: javax.swing.Icon, enabled: () -> Boolean = { true }, perform: () -> Unit) =
+fun hatchAction(text: String, icon: Icon, enabled: () -> Boolean = { true }, perform: () -> Unit) =
     object : AnAction(text, text, icon) {
         override fun getActionUpdateThread() = ActionUpdateThread.EDT
         override fun update(e: AnActionEvent) { e.presentation.isEnabled = enabled() }
@@ -81,13 +80,13 @@ class HatchOutputPanel(private val project: Project) : JPanel(BorderLayout()), D
     private fun updateSummary() {
         service.selected?.let { run -> summary.text = "${run.directory} ? ${run.status} ? ${java.time.Duration.between(run.started, run.ended ?: java.time.Instant.now()).seconds}s" }
     }
-    private fun rerun() = WriteIntentReadAction.run(Runnable {
-        val run = service.selected ?: return@Runnable
-        if (!TrustedProjects.isProjectTrusted(project)) return@Runnable
+    private fun rerun() = hatchWriteIntentAction {
+        val run = service.selected ?: return@hatchWriteIntentAction
+        if (!TrustedProjects.isProjectTrusted(project)) return@hatchWriteIntentAction
         val confirmation = run.task.confirmation
-        if (confirmation != null && Messages.showYesNoDialog(project, confirmation, "Confirm Hatch Action", Messages.getWarningIcon()) != Messages.YES) return@Runnable
+        if (confirmation != null && Messages.showYesNoDialog(project, confirmation, "Confirm Hatch Action", Messages.getWarningIcon()) != Messages.YES) return@hatchWriteIntentAction
         FileDocumentManager.getInstance().saveAllDocuments()
         service.launch(run.label, run.directory, project.getService(HatchSettings::class.java).executable, run.task)
-    })
+    }
     override fun dispose() { timer.stop() }
 }

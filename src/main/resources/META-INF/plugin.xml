@@ -14,6 +14,7 @@
                     factoryClass="dev.barmy.hatch.HatchToolWindowFactory"/>
         <toolWindow id="Hatch Tasks" anchor="bottom" icon="/icons/hatch.svg" factoryClass="dev.barmy.hatch.HatchOutputFactory"/>
         <projectConfigurable parentId="tools" id="hatch.settings" displayName="Hatch" instance="dev.barmy.hatch.HatchConfigurable"/>
+        <postStartupActivity implementation="dev.barmy.hatch.HatchStartup"/>
         <configurationType implementation="dev.barmy.hatch.HatchConfigurationType"/>
         <programRunner implementation="dev.barmy.hatch.HatchProgramRunner"/>
     </extensions>

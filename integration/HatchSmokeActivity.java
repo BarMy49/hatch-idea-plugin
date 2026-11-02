@@ -34,6 +34,13 @@ public final class HatchSmokeActivity implements StartupActivity.DumbAware {
                                 while (nodes.hasMoreElements()) {
                                     var node = nodes.nextElement();
                                     if (node.toString().equals("default:smoke")) {
+                                        var runManager = com.intellij.execution.RunManager.getInstance(project);
+                                        var generated = java.util.Arrays.stream(runManager.getAllSettings()).filter(c -> c.getName().equals("run hatch-smoke") || c.getName().equals("test hatch-smoke")).toList();
+                                        if (generated.size() != 2) throw new AssertionError("Missing automatic run/test configurations");
+                                        var discovery = project.getService(HatchDiscovery.class);
+                                        int count = runManager.getAllSettings().length;
+                                        com.intellij.openapi.application.WriteIntentReadAction.run((Runnable)() -> HatchRunner.INSTANCE.setup(project, discovery.getResults()));
+                                        if (runManager.getAllSettings().length != count) throw new AssertionError("Refresh duplicated configurations");
                                         tree.setSelectionPath(new TreePath(node.getPath()));
                                         tree.getActionMap().get("hatch.run").actionPerformed(null);
                                         tree.getActionMap().get("hatch.run").actionPerformed(null);

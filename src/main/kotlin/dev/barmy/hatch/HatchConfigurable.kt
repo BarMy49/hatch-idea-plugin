@@ -10,14 +10,17 @@ import javax.swing.JComponent
 class HatchConfigurable(private val project: Project) : Configurable {
     private val settings get() = project.getService(HatchSettings::class.java)
     private val executable = TextFieldWithBrowseButton().apply {
-        addBrowseFolderListener(project, FileChooserDescriptorFactory.createSingleFileDescriptor().withTitle("Hatch Executable"))
+        addBrowseFolderListener(project, FileChooserDescriptorFactory.singleFile().withTitle("Hatch Executable"))
     }
+    private val automatic = javax.swing.JCheckBox("Automatically create run and test configurations")
     override fun getDisplayName() = "Hatch"
-    override fun createComponent(): JComponent = FormBuilder.createFormBuilder().addLabeledComponent("Hatch executable:", executable).addComponentFillVertically(javax.swing.JPanel(), 0).panel
-    override fun isModified() = executable.text != settings.executable
-    override fun reset() { executable.text = settings.executable }
+    override fun createComponent(): JComponent = FormBuilder.createFormBuilder().addLabeledComponent("Hatch executable:", executable).addComponent(automatic).addComponentFillVertically(javax.swing.JPanel(), 0).panel
+    override fun isModified() = executable.text != settings.executable || automatic.isSelected != settings.autoConfigurations
+    override fun reset() { executable.text = settings.executable; automatic.isSelected = settings.autoConfigurations }
     override fun apply() {
         try { settings.executable = HatchExecutableInput.normalize(executable.text) }
         catch (error: IllegalArgumentException) { throw com.intellij.openapi.options.ConfigurationException(error.message) }
+        settings.autoConfigurations = automatic.isSelected
+        project.getService(HatchDiscovery::class.java).refresh()
     }
 }
