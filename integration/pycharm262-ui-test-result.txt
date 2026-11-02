@@ -1,0 +1,15 @@
+Startup activity: /tmp/hatch-ui-test/project
+Tool window registered: true
+Panel: class dev.barmy.hatch.HatchToolWindowPanel; content=Tasks 0.3.2
+Clicking Run with an unsaved editor document; enabled=true
+Run returned: Sent 'default:smoke' to Terminal.
+PASS Run saved the document and actual Terminal executed: /tmp/hatch-ui-test/project|run|default:smoke
+
+PASS Refresh immediately applied new executable without IDE restart
+Double-click dispatched: Sent 'default:smoke' to Terminal.
+PASS double-click executed using edited path containing spaces/apostrophe
+Enter dispatched: Sent 'default:smoke' to Terminal.
+PASS Enter executed a third actual terminal command
+PASS Apply immediately changed executable without restart
+PASS Save configuration
+SUCCESS GUI integration: Run + document save + Refresh + double-click + Enter + Apply + saved configuration

@@ -1,0 +1,20 @@
+<idea-plugin>
+    <id>dev.barmy.hatch.tasks</id>
+    <name>Hatch Tasks</name>
+    <vendor>Community</vendor>
+    <description><![CDATA[
+        Hatch task discovery, environment operations, and package builds in an IntelliJ tool window.
+    ]]></description>
+    <depends>com.intellij.modules.platform</depends>
+
+    <extensions defaultExtensionNs="com.intellij">
+        <toolWindow id="Hatch"
+                    anchor="right" icon="/icons/hatch.svg"
+                    canCloseContents="true"
+                    factoryClass="dev.barmy.hatch.HatchToolWindowFactory"/>
+        <toolWindow id="Hatch Tasks" anchor="bottom" icon="/icons/hatch.svg" factoryClass="dev.barmy.hatch.HatchOutputFactory"/>
+        <projectConfigurable parentId="tools" id="hatch.settings" displayName="Hatch" instance="dev.barmy.hatch.HatchConfigurable"/>
+        <configurationType implementation="dev.barmy.hatch.HatchConfigurationType"/>
+        <programRunner implementation="dev.barmy.hatch.HatchProgramRunner"/>
+    </extensions>
+</idea-plugin>
