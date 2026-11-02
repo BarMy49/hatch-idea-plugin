@@ -1,8 +1,8 @@
 .gradle/
 .intellijPlatform/
 .kotlin/
-.idea/*
-!.idea/vcs.xml
+**/.idea/*
+!/.idea/vcs.xml
 build/
 *.iml
 out/
