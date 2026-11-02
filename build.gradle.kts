@@ -5,14 +5,16 @@ plugins {
     id("org.jetbrains.intellij.platform") version "2.19.0"
 }
 group = "dev.barmy"
-version = "0.5.0"
+version = "0.6.0"
 
 repositories {
     mavenCentral()
     intellijPlatform { defaultRepositories() }
 }
 dependencies {
+    implementation("org.tomlj:tomlj:1.1.1")
     intellijPlatform {
+        bundledPlugin("PythonCore")
         val localIde = providers.gradleProperty("localIdePath").orNull
         if (localIde != null) local(localIde) else pycharm(providers.gradleProperty("platformVersion").getOrElse("2025.3"))
     }

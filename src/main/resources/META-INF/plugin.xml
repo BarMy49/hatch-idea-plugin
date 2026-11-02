@@ -6,6 +6,7 @@
         Hatch task discovery, environment operations, and package builds in an IntelliJ tool window.
     ]]></description>
     <depends>com.intellij.modules.platform</depends>
+    <depends>com.intellij.modules.python</depends>
 
     <extensions defaultExtensionNs="com.intellij">
         <toolWindow id="Hatch"
@@ -15,6 +16,7 @@
         <toolWindow id="Hatch Tasks" anchor="bottom" icon="/icons/hatch.svg" factoryClass="dev.barmy.hatch.HatchOutputFactory"/>
         <projectConfigurable parentId="tools" id="hatch.settings" displayName="Hatch" instance="dev.barmy.hatch.HatchConfigurable"/>
         <postStartupActivity implementation="dev.barmy.hatch.HatchStartup"/>
+        <directoryProjectGenerator implementation="dev.barmy.hatch.HatchProjectGenerator"/>
         <configurationType implementation="dev.barmy.hatch.HatchConfigurationType"/>
         <programRunner implementation="dev.barmy.hatch.HatchProgramRunner"/>
     </extensions>
