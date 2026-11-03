@@ -149,7 +149,12 @@ class HatchProjectGenerator : DirectoryProjectGenerator<HatchCreationOptions> {
         val process = CapturingProcessHandler(GeneralCommandLine(binary).withWorkDirectory(directory.toFile()).withParameters(arguments).withEnvironment(environment).withCharset(Charsets.UTF_8))
         val result = process.runProcessWithProgressIndicator(indicator)
         indicator.checkCanceled()
-        check(result.exitCode == 0) { result.stderr.ifBlank { result.stdout.ifBlank { "Hatch exited with ${result.exitCode}" } } }
+        check(result.exitCode == 0) {
+            // Hatch/pip can split the summary and the backend traceback across streams.
+            // Preserve both so an editable-metadata failure includes its actual cause.
+            "Process exited with ${result.exitCode}\n" +
+                listOf(result.stderr, result.stdout).filter { it.isNotBlank() }.joinToString("\n")
+        }
         return result.stdout
     }
 }

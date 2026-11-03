@@ -1,3 +1,7 @@
+## 0.6.3 — current fixes
+
+Discovery now schedules document saves and result application with explicit non-modal modality. Project setup failures retain both stdout and stderr. Version metadata has been bumped; a 0.6.3 package has not yet been built or validated. Earlier results below refer to 0.6.2.
+
 ## Real project creation and discovery ? 2026-11-03
 
 PyCharm 262.11879.98 passed the full generator integration test in an isolated profile, using Python 3.14 and existing Hatch. Verified generated project files, dependency setup, the project `.venv` interpreter, SDK roots/additional data, module SDK inheritance, broken SDK recovery, repeated SDK configuration without duplicates, and live Hatch discovery (package metadata and multiple environments). A real `hatch run default:python` reported the project `.venv/Scripts/python.exe`.

@@ -2,7 +2,7 @@
 
 A native task browser, execution console, and project creation wizard for the Python [Hatch](https://hatch.pypa.io/) build system.
 
-**Version:** 0.6.2 | **Target IDE range:** PyCharm builds 253-262 (2025.3-2026.2)
+**Version:** 0.6.3 | **Target IDE range:** PyCharm builds 253-262 (2025.3-2026.2)
 
 ## Contents
 

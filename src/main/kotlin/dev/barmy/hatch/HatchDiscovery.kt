@@ -3,6 +3,7 @@ package dev.barmy.hatch
 import com.intellij.ide.trustedProjects.TrustedProjects
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.application.ApplicationManager
+import com.intellij.openapi.application.ModalityState
 import com.intellij.openapi.components.Service
 import com.intellij.openapi.fileEditor.FileDocumentManager
 import com.intellij.openapi.project.Project
@@ -57,6 +58,11 @@ class HatchDiscovery(private val project: Project) : Disposable {
     }
     private fun changed() = listeners.toList().forEach { it() }
     fun refresh() {
+        // Tool-window initialization can run on EDT with write intent but outside a
+        // write-safe transaction. Queue the save/discovery work with explicit modality.
+        ApplicationManager.getApplication().invokeLater({ refreshInWriteSafeContext() }, ModalityState.nonModal())
+    }
+    private fun refreshInWriteSafeContext() {
         if (disposed || project.isDisposed) return
         val request = ++generation
         if (!TrustedProjects.isProjectTrusted(project)) { busy = false; changed(); return }
@@ -72,12 +78,12 @@ class HatchDiscovery(private val project: Project) : Disposable {
                 } else Result.failure(IllegalStateException("Task discovery failed"))
                 HatchDiscoveryResult(directory, environments, metadata.getOrNull(), metadata.exceptionOrNull()?.message)
             }
-            ApplicationManager.getApplication().invokeLater {
+            ApplicationManager.getApplication().invokeLater({
                 if (disposed || project.isDisposed || request != generation || !TrustedProjects.isProjectTrusted(project)) return@invokeLater
                 results = discovered; busy = false
                 hatchWriteIntentAction { if (settings.autoConfigurations) HatchRunner.setup(project, discovered) }
                 changed()
-            }
+            }, ModalityState.nonModal())
         }
     }
     private fun capture(executable: String, directory: Path, arguments: List<String>): String {
