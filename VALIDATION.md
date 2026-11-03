@@ -1,3 +1,7 @@
+## 0.6.4 ? empty author metadata
+
+Reproduced the supplied untitled.zip failure with Hatchling: project.authors contained an empty name and email. The generator now omits empty authors/fields; a regression test was added. Build/test execution was blocked by Gradle wrapper network access, so no 0.6.4 ZIP is verified.
+
 ## 0.6.3 — current fixes
 
 Discovery now schedules document saves and result application with explicit non-modal modality. Project setup failures retain both stdout and stderr. Version metadata has been bumped; a 0.6.3 package has not yet been built or validated. Earlier results below refer to 0.6.2.

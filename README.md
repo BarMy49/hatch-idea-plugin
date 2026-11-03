@@ -2,7 +2,7 @@
 
 A native task browser, execution console, and project creation wizard for the Python [Hatch](https://hatch.pypa.io/) build system.
 
-**Version:** 0.6.3 | **Target IDE range:** PyCharm builds 253-262 (2025.3-2026.2)
+**Version:** 0.6.5 | **Target IDE range:** PyCharm builds 253-262 (2025.3-2026.2)
 
 ## Contents
 
@@ -186,3 +186,5 @@ Requires **JDK 21**. Use the Gradle wrapper:
 Installable ZIPs are written to `build/distributions/`. Use [`examples/demo`](examples/demo) for manual testing in the sandbox IDE.
 
 Pass `-PlocalIdePath=<IDE directory>` to build against a local installation, or `-PverificationIdePath=<IDE directory>` to include another installation in binary verification.
+
+New projects receive `build <name>`, `test <name>` when tests are enabled, and `run <name>` for CLI templates. These are created after file generation even if environment setup fails. Automatic configuration settings and user edits are respected. Under Run > Edit Configurations > + > Hatch, choose Hatch Command, Hatch Test, or Hatch Build.

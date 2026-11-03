@@ -21,12 +21,13 @@ import javax.swing.*
 class HatchConfigurationType : ConfigurationTypeBase(
     "HatchRunConfiguration", "Hatch", "Run a Hatch script or build task", com.intellij.openapi.util.IconLoader.getIcon("/icons/hatch.svg", HatchConfigurationType::class.java),
 ), DumbAware {
-    init { addFactory(object : ConfigurationFactory(this) {
-        override fun getId() = "Hatch"
+    init { listOf("Hatch" to listOf("run", "default:python"), "Hatch Test" to listOf("test"), "Hatch Build" to listOf("build")).forEach { (id, args) -> addFactory(object : ConfigurationFactory(this) {
+        override fun getId() = id
+        override fun getName() = if (id == "Hatch") "Hatch Command" else id
         override fun createTemplateConfiguration(project: Project): RunConfiguration =
-            HatchRunConfiguration(project, this, "Hatch")
+            HatchRunConfiguration(project, this, id).also { it.arguments = args.toMutableList() }
         override fun isEditableInDumbMode() = true
-    }) }
+    }) } }
 }
 
 class HatchRunConfiguration(project: Project, factory: ConfigurationFactory, name: String) :
@@ -131,9 +132,21 @@ class HatchProgramRunner : AsyncProgramRunner<RunnerSettings>() {
 }
 
 object HatchRunner {
+    fun setupCreated(project: Project, directory: Path, options: HatchCreationOptions) {
+        val settings = project.getService(HatchSettings::class.java)
+        if (!settings.autoConfigurations) return
+        val plans = HatchConfigurationPlanner.creationPlans(directory, options)
+        val manager = RunManager.getInstance(project)
+        for (plan in plans) {
+            val config = existing(project, plan) ?: if (plan.identity !in settings.generatedIdentities) create(project, plan) else null
+            if (plan.identity !in settings.generatedIdentities) settings.generatedIdentities.add(plan.identity)
+            if (manager.selectedConfiguration == null && config != null) manager.selectedConfiguration = config
+        }
+    }
+
     fun configuration(project: Project, label: String, directory: Path, arguments: List<String>): com.intellij.execution.RunnerAndConfigurationSettings {
         val type = ConfigurationTypeUtil.findConfigurationType(HatchConfigurationType::class.java)
-        return RunManager.getInstance(project).createConfiguration(label, type.configurationFactories.single()).also {
+        return RunManager.getInstance(project).createConfiguration(label, type.configurationFactories.first { it.id == when (arguments.firstOrNull()) { "test" -> "Hatch Test"; "build" -> "Hatch Build"; else -> "Hatch" } }).also {
             val config = it.configuration as HatchRunConfiguration
             config.directory = directory.toString()
             config.arguments = arguments.toMutableList()

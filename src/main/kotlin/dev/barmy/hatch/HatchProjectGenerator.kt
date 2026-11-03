@@ -84,11 +84,15 @@ class HatchProjectGenerator : DirectoryProjectGenerator<HatchCreationOptions> {
                         command(effective.executable, staging, args, indicator)
                         val metadata = output.resolve("pyproject.toml")
                         var contents = HatchCreation.description(Files.readString(metadata), settings.description)
+                    contents = HatchCreation.authorMetadata(contents, settings.author, settings.email)
                         if (effective.createVenv) contents = HatchCreation.projectEnvironment(contents)
                         Files.writeString(metadata, contents)
                         indicator.checkCanceled()
                         HatchCreation.transfer(output, destination, preserveBaseVenv = effective.createVenv)
                         filesCreated = true
+                    ApplicationManager.getApplication().invokeLater({
+                        if (!project.isDisposed) hatchWriteIntentAction { HatchRunner.setupCreated(project, destination, effective) }
+                    }, com.intellij.openapi.application.ModalityState.nonModal())
                     } finally {
                         Files.walk(staging).use { paths -> paths.sorted(Comparator.reverseOrder()).forEach(Files::deleteIfExists) }
                     }

@@ -24,6 +24,12 @@ object HatchCreation {
         else -> null
     }
     private fun quote(value: String): String = Gson().toJson(value)
+    fun authorMetadata(toml: String, author: String, email: String): String {
+        val fields = listOf("name" to author.trim(), "email" to email.trim())
+            .filter { it.second.isNotEmpty() }.joinToString(", ") { "${it.first} = ${quote(it.second)}" }
+        val replacement = if (fields.isEmpty()) "" else "authors = [{ $fields }]"
+        return Regex("(?ms)^authors = \\[.*?^]\\s*").replace(toml) { "$replacement\n" }
+    }
     /** Only generated projects pass through here; existing projects are never migrated. */
     fun projectEnvironment(toml: String): String {
         val parsed = org.tomlj.Toml.parse(toml)

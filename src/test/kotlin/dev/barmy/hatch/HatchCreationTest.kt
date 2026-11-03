@@ -8,6 +8,15 @@ import java.nio.file.Path
 import org.tomlj.Toml
 
 class HatchCreationTest {
+    @Test fun `blank authors are omitted and partial authors remain valid`() {
+        val input = "[project]\nname = \"demo\"\nauthors = [\n { name = \"\", email = \"\" },\n]\nclassifiers = []\n"
+        val empty = Toml.parse(HatchCreation.authorMetadata(input, "", ""))
+        assertFalse(empty.hasErrors())
+        assertFalse(empty.contains("project.authors"))
+        val named = Toml.parse(HatchCreation.authorMetadata(input, "Example", ""))
+        assertEquals("Example", named.getArray("project.authors")!!.getTable(0).getString("name"))
+        assertFalse(named.getArray("project.authors")!!.getTable(0).contains("email"))
+    }
     @TempDir lateinit var root: Path
     @Test fun `template parameters round trip without TOML injection`() {
         val o = HatchCreationOptions(author = "A \"quoted\" author\n[evil]", email = "x@example.org", licenses = "MIT, Apache-2.0", tests = false, ci = true, srcLayout = false)
