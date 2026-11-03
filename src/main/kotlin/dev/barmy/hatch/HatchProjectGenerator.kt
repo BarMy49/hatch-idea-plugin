@@ -183,7 +183,7 @@ private class HatchCreationPeer : ProjectGeneratorPeer<HatchCreationOptions> {
         .addLabeledComponent("Author:", author).addLabeledComponent("Email:", email).addLabeledComponent("Licenses (SPDX, comma-separated):", licenses)
         .addComponent(headers).addComponent(tests).addComponent(ci).addComponent(src).addComponent(cli)
         .addLabeledComponent("Hatch executable:", executable).addComponent(environment)
-        .addLabeledComponent("Python source:", pythonSource).addLabeledComponent("Installed Python:", python)
+        .addLabeledComponent("Python source:", pythonSource).addLabeledComponent("Python executable:", python)
         .addLabeledComponent("Download version:", pythonVersions).addComponent(downloadStatus).addComponent(reloadDownloads)
         .addComponent(createVenv).addComponent(installHatch)
         .addComponent(JLabel("Project .venv is shared by the IDE and Hatch's default environment.")).panel

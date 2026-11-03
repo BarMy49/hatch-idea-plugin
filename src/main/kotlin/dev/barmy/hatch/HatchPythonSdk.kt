@@ -93,6 +93,9 @@ internal object HatchPythonSdk {
         }
     }
 
+    // Python's supported creation flow uses internal wizard types on 253–262.
+    // Keep this dependency confined to the adapter; both branches have live SDK regression coverage.
+    @Suppress("UnstableApiUsage")
     private fun create(project: Project, interpreter: Path, version: String): Sdk = runBlockingCancellable {
         val local = invoke(type("com.intellij.platform.eel.provider.EelProviderUtil").getMethod("getLocalEel"), null)!!
         val fsType = try { type("com.jetbrains.python.sdk.add.v2.EelFileSystem") }
