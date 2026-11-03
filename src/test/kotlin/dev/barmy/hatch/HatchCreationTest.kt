@@ -49,4 +49,38 @@ class HatchCreationTest {
         assertNull(HatchCreation.validate(HatchCreationOptions(name = "demo", environment = false)))
         assertEquals("my-demo", HatchCreation.normalized("My_Demo"))
     }
+    @Test fun `download mode needs a version and venv but no existing Python`() {
+        val options = HatchCreationOptions(name = "demo", downloadPython = true, createVenv = true, pythonVersion = "3.13.7")
+        assertNull(HatchCreation.validate(options))
+        assertNotNull(HatchCreation.validate(options.copy(pythonVersion = "")))
+        assertNotNull(HatchCreation.validate(options.copy(createVenv = false)))
+    }
+    @Test fun `default venv does not leak into generated test environments`() {
+        val input = """
+            [project]
+            name = "demo"
+            [tool.hatch.envs.default.scripts]
+            run = "python -m demo"
+            [tool.hatch.envs.test]
+            dependencies = ["pytest"]
+            [[tool.hatch.envs.test.matrix]]
+            python = ["3.12", "3.13"]
+            [tool.hatch.envs.types.scripts]
+            check = "mypy ."
+        """.trimIndent()
+        val parsed = Toml.parse(HatchCreation.projectEnvironment(input))
+        assertFalse(parsed.hasErrors(), parsed.errors().toString())
+        assertEquals(".venv", parsed.getString("tool.hatch.envs.default.path"))
+        assertEquals(".hatch-envs/{env_name}", parsed.getString("tool.hatch.envs.test.path"))
+        assertEquals(".hatch-envs/{env_name}", parsed.getString("tool.hatch.envs.types.path"))
+        assertEquals("python -m demo", parsed.getString("tool.hatch.envs.default.scripts.run"))
+        assertEquals(1, parsed.getArray("tool.hatch.envs.test.matrix")!!.size())
+    }
+    @Test fun `quoted environment names and custom paths are preserved`() {
+        val input = "[tool.hatch.envs.\"lint.check\"]\npath = \"custom\"\n[tool.hatch.envs.\"default\"]\ndependencies = []\n"
+        val parsed = Toml.parse(HatchCreation.projectEnvironment(input))
+        assertFalse(parsed.hasErrors(), parsed.errors().toString())
+        assertEquals("custom", parsed.getString(listOf("tool", "hatch", "envs", "lint.check", "path")))
+        assertEquals(".venv", parsed.getString("tool.hatch.envs.default.path"))
+    }
 }

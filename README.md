@@ -2,7 +2,7 @@
 
 A native task browser, execution console, and project creation wizard for the Python [Hatch](https://hatch.pypa.io/) build system.
 
-**Version:** 0.6.0 | **Target IDE range:** PyCharm builds 253-262 (2025.3-2026.2)
+**Version:** 0.6.2 | **Target IDE range:** PyCharm builds 253-262 (2025.3-2026.2)
 
 ## Contents
 
@@ -24,11 +24,13 @@ A native task browser, execution console, and project creation wizard for the Py
 | Run configurations | Automatic run/test configurations named after package metadata, plus manual configuration saving. |
 | Linked projects | Run tasks from nested or external Hatch projects in their own working directories. |
 | Project creation | Configure Hatch template options and optionally create an environment and select its Python interpreter. |
+| Python downloads | Choose an available Python version through the IDE installer, then create the project `.venv`. |
+| Project-local Hatch | Create `.venv`, install Hatch into it, and use that copy for generation and project tasks without system Hatch. |
 | IDE integration | Native action toolbars, keyboard activation, search, and monochrome Hatch icons for light and dark themes. |
 
 ## Installation and setup
 
-Hatch must be installed separately and available to the IDE. To check your installation, run `hatch --version` in a terminal.
+For existing projects, Hatch must be installed and available to the IDE. To check your installation, run `hatch --version` in a terminal. When creating a new project, the wizard can instead install Hatch into the new project-local `.venv`; no system Hatch is needed in that mode.
 
 1. Obtain the plugin ZIP, or [build it from source](#build-and-development). Build output is under `build/distributions/`.
 2. In PyCharm, open **Settings > Plugins**, choose the gear menu, then **Install Plugin from Disk** and select the ZIP. Restart if prompted.
@@ -100,11 +102,44 @@ Saved changes to `pyproject.toml` or `hatch.toml` trigger a debounced refresh. M
 | GitHub Actions CI | Generate a CI workflow. |
 | Use src layout | Place the package under `src/`; disable for a flat layout. |
 
-4. Set the Hatch executable. First-use author, licensing, and template defaults are loaded from `hatch config show`; subsequent creations reuse wizard preferences.
-5. Leave **Create Hatch environment and configure interpreter** enabled to install the default environment and configure its Python SDK in PyCharm. Choose the base Python executable. Disable this option to generate files only.
-6. Create the project and follow the background progress. On completion, the plugin opens `pyproject.toml` and refreshes Hatch discovery.
+4. Choose how Python and Hatch should be set up using the options below.
+5. Create the project and follow the background progress. On completion, the plugin opens `pyproject.toml` and refreshes Hatch discovery.
 
-Generation uses a temporary configuration and staging directory without changing global Hatch settings. Existing project content is rejected; IDE-created `.idea` metadata is preserved. License downloads and dependency installation can require network access. If environment setup fails, the generated project remains available and the error dialog offers a retry.
+### Create a project without system Hatch
+
+Choose an installed Python or let the IDE download one:
+
+1. Select **Use installed Python** and choose its executable, or select **Download Python** and choose an available version. Use **Refresh versions** to retry loading the list. Downloads use the IDE?s Python installer and require network access.
+2. Enable **Create project .venv for the IDE and Hatch default environment**. Download mode enables this automatically.
+3. Enable **Install Hatch into .venv and use it for this project**. The **Hatch executable** field is disabled because no existing Hatch executable is needed.
+4. Leave **Set up Hatch environment and install project dependencies** enabled to install the project and its default dependencies. Disabling it defers dependency installation; the new `.venv` is still selected as the IDE interpreter.
+
+The plugin creates `.venv` at its final location, installs Hatch through that environment's Python, and uses the local Hatch executable to generate the project. It saves the local executable in **Settings > Tools > Hatch**, so discovery, tree-launched tasks, and run configurations without an executable override use the same copy.
+
+| Platform | Saved Hatch executable |
+| --- | --- |
+| Windows | `<project>/.venv/Scripts/hatch.exe` |
+| Linux / macOS | `<project>/.venv/bin/hatch` |
+
+Installation requires package-index access. If it fails, the plugin reports the error and does not fall back to system Hatch. The wizard-owned `.venv` is retained; choose **Retry** in the error dialog to resume setup without regenerating completed files. Unrelated existing virtual environments are not modified.
+
+### Use an existing Hatch installation
+
+Leave **Install Hatch into .venv and use it for this project** unchecked and choose the **Hatch executable**, or leave it as `hatch` if the IDE can find it.
+
+With **Set up Hatch environment and install project dependencies** enabled, the selected Python is used to prepare Hatch?s default environment and configure its Python SDK in PyCharm. Enable **Create project .venv for the IDE and Hatch default environment** to keep that environment inside the project while continuing to use your existing Hatch executable.
+
+To generate files only, disable both environment creation and project-local `.venv` creation, and use an existing Hatch installation.
+
+### Understand the environments and defaults
+
+When project `.venv` creation is enabled, **the IDE interpreter and Hatch?s default environment use the same `.venv`**. It contains the project dependencies and optionally Hatch itself. Other generated environments use separate paths under `.hatch-envs/`. Keep the downloaded/base Python installation: the virtual environment depends on it. This behavior applies to newly generated projects; existing projects are not migrated.
+
+Without project `.venv` creation, Hatch uses its normal environment location and the IDE selects that environment. Downloadable versions depend on the IDE and operating system. If the IDE offers no downloads, choose an installed Python with `venv` and `pip` support.
+
+When using an existing Hatch installation, first-use author, licensing, and template defaults are loaded from `hatch config show`. Subsequent creations reuse wizard preferences. All displayed template values remain editable.
+
+Generation uses a temporary configuration and staging directory without changing global Hatch settings. Existing project content is rejected; IDE-created `.idea` metadata and the wizard-owned bootstrap `.venv` are preserved. License downloads and dependency installation can require network access. If task-environment setup fails after generation, the project files remain available and the error dialog offers a retry.
 
 ## Troubleshooting
 
@@ -115,6 +150,9 @@ Generation uses a temporary configuration and staging directory without changing
 | Discovery fails or tasks are stale | Choose **Show Details** in the Hatch window, fix the reported executable/configuration problem, and refresh. |
 | Automatic run/test configurations are missing | Check the automatic-creation setting, recognized script names, and package metadata. Metadata errors appear in **Show Details**. |
 | A task fails | Select its run in **Hatch Tasks**, or inspect the **Run** window for saved configurations. Review output and exit status. |
+| Local Hatch installation fails | Check the selected Python has `venv` and `pip` support and can access the package index. Retry in the setup error dialog; the wizard-owned `.venv` is retained. |
+| Local Hatch executable is missing | Check that the project's `.venv` still exists and that **Settings > Tools > Hatch** points to its Hatch executable. |
+| Python download fails | Check network/proxy access and retry. If a version is unavailable, refresh the version list or choose installed Python. |
 | Project environment setup fails | Check the selected Python executable, network access, and Hatch error. Retry when prompted, or use the generated files without environment setup. |
 
 ## Limitations and validation
@@ -123,7 +161,7 @@ Generation uses a temporary configuration and staging directory without changing
 - Interpreter setup is provided during project creation. Task discovery for existing projects does not automatically replace their Python interpreter.
 - The plugin does not attach the Python debugger or implement the full IntelliJ External System project model.
 - The task console is not a terminal emulator; programs requiring terminal-specific interaction may need a separate terminal.
-- The declared IDE range is 253-262. Automated binary verification currently covers PyCharm 2025.3. Live wizard/interpreter checks, visual inspection, and PyCharm 2026.2 verification remain pending.
+- The declared IDE range is 253-262. Automated binary verification currently covers PyCharm 2025.3. A direct SDK recovery test passed on PyCharm 2026.2. Full wizard/download interaction, visual inspection, and 2026.2 binary verification remain pending.
 
 See [VALIDATION.md](VALIDATION.md) for completed checks and remaining verification, and [integration/README.md](integration/README.md) for the IDE smoke-test harness.
 
